@@ -1,0 +1,1068 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DOI & Reference Checker</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-deep: #0d0f14;
+            --bg-card: #161921;
+            --bg-elevated: #1e222b;
+            --border-subtle: rgba(255, 255, 255, 0.06);
+            --border-hover: rgba(255, 255, 255, 0.12);
+            --text-primary: #f4f4f5;
+            --text-secondary: #9ca3af;
+            --text-muted: #6b7280;
+            --accent-amber: #f59e0b;
+            --accent-amber-glow: rgba(245, 158, 11, 0.15);
+            --accent-amber-soft: rgba(245, 158, 11, 0.08);
+            --success: #10b981;
+            --error: #ef4444;
+            --serif: 'Cormorant Garamond', Georgia, serif;
+            --sans: 'DM Sans', -apple-system, sans-serif;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+        }
+
+        body {
+            font-family: var(--sans);
+            background: var(--bg-deep);
+            color: var(--text-primary);
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Animated constellation background */
+        .constellation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+        }
+
+        .star {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            background: var(--accent-amber);
+            border-radius: 50%;
+            opacity: 0;
+            animation: twinkle 4s ease-in-out infinite;
+        }
+
+        .star::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 8px;
+            height: 8px;
+            transform: translate(-50%, -50%);
+            background: radial-gradient(circle, var(--accent-amber-glow) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.1; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(1.2); }
+        }
+
+        /* Subtle gradient orb */
+        .orb {
+            position: fixed;
+            width: 600px;
+            height: 600px;
+            border-radius: 50%;
+            background: radial-gradient(circle, var(--accent-amber-soft) 0%, transparent 70%);
+            filter: blur(80px);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .orb-1 {
+            top: -200px;
+            right: -200px;
+            animation: float 20s ease-in-out infinite;
+        }
+
+        .orb-2 {
+            bottom: -300px;
+            left: -200px;
+            opacity: 0.5;
+            animation: float 25s ease-in-out infinite reverse;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0); }
+            50% { transform: translate(-30px, 30px); }
+        }
+
+        /* Layout */
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 80px 24px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 56px;
+        }
+
+        .logo {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 72px;
+            height: 72px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 20px;
+            margin-bottom: 32px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .logo::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, var(--accent-amber-soft) 0%, transparent 50%);
+        }
+
+        .logo-icon {
+            font-size: 32px;
+            position: relative;
+            z-index: 1;
+        }
+
+        h1 {
+            font-family: var(--serif);
+            font-size: 3.5rem;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+            line-height: 1.1;
+            margin-bottom: 16px;
+            background: linear-gradient(135deg, var(--text-primary) 0%, var(--text-secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            white-space: nowrap;
+        }
+
+        .subtitle {
+            font-size: 1.125rem;
+            color: var(--text-secondary);
+            font-weight: 400;
+            max-width: 400px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        .highlight {
+            color: var(--accent-amber);
+        }
+
+        /* Main card */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 24px;
+            padding: 40px;
+            backdrop-filter: blur(20px);
+        }
+
+        /* Upload area */
+        .upload-zone {
+            border: 2px dashed var(--border-subtle);
+            border-radius: 16px;
+            padding: 48px 32px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            background: var(--bg-deep);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-zone::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, var(--accent-amber-soft) 0%, transparent 100%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .upload-zone:hover {
+            border-color: var(--accent-amber);
+            background: var(--bg-elevated);
+        }
+
+        .upload-zone:hover::before {
+            opacity: 1;
+        }
+
+        .upload-zone.dragover {
+            border-color: var(--accent-amber);
+            background: var(--bg-elevated);
+            transform: scale(1.01);
+        }
+
+        .upload-zone.dragover::before {
+            opacity: 1;
+        }
+
+        .upload-icon-wrapper {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 24px;
+            background: var(--bg-elevated);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        .upload-icon {
+            font-size: 36px;
+            transition: transform 0.3s ease;
+        }
+
+        .upload-zone:hover .upload-icon {
+            transform: translateY(-4px);
+        }
+
+        .upload-text {
+            font-family: var(--serif);
+            font-size: 1.5rem;
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .upload-hint {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            position: relative;
+            z-index: 1;
+        }
+
+        .upload-hint span {
+            color: var(--accent-amber);
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        /* File info */
+        .file-info {
+            display: none;
+            align-items: center;
+            gap: 16px;
+            padding: 16px 20px;
+            background: var(--accent-amber-soft);
+            border: 1px solid rgba(245, 158, 11, 0.2);
+            border-radius: 12px;
+            margin-top: 20px;
+        }
+
+        .file-info.show {
+            display: flex;
+        }
+
+        .file-icon {
+            font-size: 24px;
+        }
+
+        .file-details {
+            flex: 1;
+        }
+
+        .file-name {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 0.9375rem;
+        }
+
+        .file-size {
+            font-size: 0.8125rem;
+            color: var(--text-muted);
+        }
+
+        .file-remove {
+            width: 32px;
+            height: 32px;
+            border: none;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .file-remove:hover {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--error);
+        }
+
+        /* Divider */
+        .divider {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin: 32px 0;
+        }
+
+        .divider-line {
+            flex: 1;
+            height: 1px;
+            background: var(--border-subtle);
+        }
+
+        .divider-text {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
+        }
+
+        /* Options */
+        .options {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .option-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .option {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .option-label {
+            font-size: 0.8125rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .option-label-icon {
+            font-size: 14px;
+        }
+
+        input[type="number"] {
+            width: 100%;
+            padding: 14px 16px;
+            background: var(--bg-deep);
+            border: 1px solid var(--border-subtle);
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-family: var(--sans);
+            font-size: 0.9375rem;
+            transition: all 0.2s ease;
+        }
+
+        input[type="number"]:focus {
+            outline: none;
+            border-color: var(--accent-amber);
+            box-shadow: 0 0 0 3px var(--accent-amber-soft);
+        }
+
+        /* Toggle switch */
+        .toggle-option {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+            background: var(--bg-deep);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .toggle-option:hover {
+            border-color: var(--border-hover);
+        }
+
+        .toggle-content {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .toggle-title {
+            font-weight: 500;
+            color: var(--text-primary);
+            font-size: 0.9375rem;
+        }
+
+        .toggle-desc {
+            font-size: 0.8125rem;
+            color: var(--text-muted);
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 48px;
+            height: 28px;
+            flex-shrink: 0;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            inset: 0;
+            background: var(--bg-elevated);
+            border-radius: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-slider::before {
+            content: '';
+            position: absolute;
+            width: 22px;
+            height: 22px;
+            left: 3px;
+            bottom: 3px;
+            background: var(--text-secondary);
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-switch input:checked + .toggle-slider {
+            background: var(--accent-amber);
+        }
+
+        .toggle-switch input:checked + .toggle-slider::before {
+            transform: translateX(20px);
+            background: var(--bg-deep);
+        }
+
+        /* Submit button */
+        .submit-btn {
+            width: 100%;
+            padding: 18px 32px;
+            margin-top: 32px;
+            background: var(--accent-amber);
+            border: none;
+            border-radius: 12px;
+            color: var(--bg-deep);
+            font-family: var(--sans);
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .submit-btn::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, transparent 50%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .submit-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(245, 158, 11, 0.3);
+        }
+
+        .submit-btn:hover:not(:disabled)::before {
+            opacity: 1;
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .submit-btn:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        /* Progress */
+        .progress-section {
+            display: none;
+            margin-top: 32px;
+        }
+
+        .progress-section.show {
+            display: block;
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .progress-label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        .progress-percent {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--accent-amber);
+        }
+
+        .progress-bar {
+            height: 6px;
+            background: var(--bg-deep);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--accent-amber) 0%, #fbbf24 100%);
+            border-radius: 3px;
+            transition: width 0.4s ease;
+        }
+
+        /* Console */
+        .console-section {
+            display: none;
+            margin-top: 24px;
+        }
+
+        .console-section.show {
+            display: block;
+        }
+
+        .console {
+            background: var(--bg-deep);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .console-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            background: var(--bg-elevated);
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .console-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.8125rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .console-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--accent-amber);
+            border-radius: 50%;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        .console-status {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .console-body {
+            max-height: 280px;
+            overflow-y: auto;
+            padding: 16px;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 0.8125rem;
+            line-height: 1.7;
+        }
+
+        .console-body::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .console-body::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .console-body::-webkit-scrollbar-thumb {
+            background: var(--border-subtle);
+            border-radius: 3px;
+        }
+
+        .console-line {
+            color: var(--text-secondary);
+            padding: 2px 0;
+        }
+
+        .console-line.error {
+            color: var(--error);
+        }
+
+        .console-line.success {
+            color: var(--success);
+        }
+
+        /* Error message */
+        .error-message {
+            display: none;
+            padding: 16px 20px;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            border-radius: 12px;
+            color: var(--error);
+            font-size: 0.9375rem;
+            margin-top: 20px;
+        }
+
+        .error-message.show {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            margin-top: 48px;
+            padding: 24px;
+        }
+
+        .footer-text {
+            font-size: 0.8125rem;
+            color: var(--text-muted);
+        }
+
+        .footer-link {
+            color: var(--accent-amber);
+            text-decoration: none;
+            transition: opacity 0.2s ease;
+        }
+
+        .footer-link:hover {
+            opacity: 0.8;
+        }
+
+        /* Responsive */
+        @media (max-width: 640px) {
+            .container {
+                padding: 48px 16px;
+            }
+
+            h1 {
+                font-size: 2.5rem;
+            }
+
+            .card {
+                padding: 24px;
+            }
+
+            .upload-zone {
+                padding: 32px 20px;
+            }
+
+            .option-group {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Animated background -->
+    <div class="constellation" id="constellation"></div>
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+
+    <div class="container">
+        <header class="header">
+            <div class="logo">
+                <span class="logo-icon">🔬</span>
+            </div>
+            <h1>DOI & Reference Checker</h1>
+            <p class="subtitle">Validate and verify <span class="highlight">academic citations</span> with precision and clarity</p>
+        </header>
+
+        <main class="card">
+            <div class="upload-zone" id="uploadZone">
+                <div class="upload-icon-wrapper">
+                    <span class="upload-icon">📄</span>
+                </div>
+                <div class="upload-text">Drop your research paper here</div>
+                <div class="upload-hint">or <span>browse</span> to select • PDF up to 50MB</div>
+                <input type="file" id="fileInput" accept=".pdf">
+            </div>
+
+            <div class="file-info" id="fileInfo">
+                <span class="file-icon">📑</span>
+                <div class="file-details">
+                    <div class="file-name" id="fileName"></div>
+                    <div class="file-size" id="fileSize"></div>
+                </div>
+                <button class="file-remove" id="fileRemove" title="Remove file">✕</button>
+            </div>
+
+            <div class="divider">
+                <div class="divider-line"></div>
+                <span class="divider-text">Options</span>
+                <div class="divider-line"></div>
+            </div>
+
+            <div class="options">
+                <label class="toggle-option">
+                    <div class="toggle-content">
+                        <div class="toggle-title">Enable web search</div>
+                        <div class="toggle-desc">Search for references without URLs (slower)</div>
+                    </div>
+                    <div class="toggle-switch">
+                        <input type="checkbox" id="enableSearch">
+                        <span class="toggle-slider"></span>
+                    </div>
+                </label>
+
+                <div class="option-group">
+                    <div class="option">
+                        <label class="option-label" for="timeout">
+                            <span class="option-label-icon">⏱</span>
+                            Timeout (seconds)
+                        </label>
+                        <input type="number" id="timeout" value="10" min="5" max="60">
+                    </div>
+                    <div class="option">
+                        <label class="option-label" for="delay">
+                            <span class="option-label-icon">⏳</span>
+                            Request delay (seconds)
+                        </label>
+                        <input type="number" id="delay" value="1.0" min="0.5" max="5" step="0.5">
+                    </div>
+                </div>
+            </div>
+
+            <button class="submit-btn" id="processBtn" disabled>Analyze References</button>
+
+            <div class="progress-section" id="progressSection">
+                <div class="progress-header">
+                    <span class="progress-label" id="progressText">Initializing...</span>
+                    <span class="progress-percent" id="progressPercent">0%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+            </div>
+
+            <div class="console-section" id="consoleSection">
+                <div class="console">
+                    <div class="console-header">
+                        <div class="console-title">
+                            <span class="console-dot"></span>
+                            Processing Log
+                        </div>
+                        <span class="console-status" id="consoleStatus">Running...</span>
+                    </div>
+                    <div class="console-body" id="consoleContent"></div>
+                </div>
+            </div>
+
+            <div class="error-message" id="errorMessage">
+                <span>⚠️</span>
+                <span id="errorText"></span>
+            </div>
+        </main>
+
+        <footer class="footer">
+            <p class="footer-text">Built for rigorous academic review</p>
+        </footer>
+    </div>
+
+    <script>
+        // Generate constellation stars
+        function createConstellation() {
+            const container = document.getElementById('constellation');
+            const starCount = 50;
+
+            for (let i = 0; i < starCount; i++) {
+                const star = document.createElement('div');
+                star.className = 'star';
+                star.style.left = Math.random() * 100 + '%';
+                star.style.top = Math.random() * 100 + '%';
+                star.style.animationDelay = Math.random() * 4 + 's';
+                star.style.animationDuration = (3 + Math.random() * 3) + 's';
+                container.appendChild(star);
+            }
+        }
+        createConstellation();
+
+        // DOM elements
+        let selectedFile = null;
+        let jobId = null;
+
+        const uploadZone = document.getElementById('uploadZone');
+        const fileInput = document.getElementById('fileInput');
+        const fileInfo = document.getElementById('fileInfo');
+        const fileName = document.getElementById('fileName');
+        const fileSize = document.getElementById('fileSize');
+        const fileRemove = document.getElementById('fileRemove');
+        const processBtn = document.getElementById('processBtn');
+        const progressSection = document.getElementById('progressSection');
+        const progressFill = document.getElementById('progressFill');
+        const progressPercent = document.getElementById('progressPercent');
+        const progressText = document.getElementById('progressText');
+        const consoleSection = document.getElementById('consoleSection');
+        const consoleContent = document.getElementById('consoleContent');
+        const consoleStatus = document.getElementById('consoleStatus');
+        const errorMessage = document.getElementById('errorMessage');
+        const errorText = document.getElementById('errorText');
+
+        // Format file size
+        function formatSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+
+        // Upload zone events
+        uploadZone.addEventListener('click', () => fileInput.click());
+
+        uploadZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadZone.classList.add('dragover');
+        });
+
+        uploadZone.addEventListener('dragleave', () => {
+            uploadZone.classList.remove('dragover');
+        });
+
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('dragover');
+            if (e.dataTransfer.files.length > 0) {
+                handleFile(e.dataTransfer.files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+            }
+        });
+
+        fileRemove.addEventListener('click', (e) => {
+            e.stopPropagation();
+            selectedFile = null;
+            fileInfo.classList.remove('show');
+            processBtn.disabled = true;
+            fileInput.value = '';
+        });
+
+        function handleFile(file) {
+            if (!file.name.toLowerCase().endsWith('.pdf')) {
+                showError('Please select a PDF file');
+                return;
+            }
+
+            if (file.size > 50 * 1024 * 1024) {
+                showError('File size must be less than 50MB');
+                return;
+            }
+
+            selectedFile = file;
+            fileName.textContent = file.name;
+            fileSize.textContent = formatSize(file.size);
+            fileInfo.classList.add('show');
+            processBtn.disabled = false;
+            hideError();
+        }
+
+        // Clear console content safely
+        function clearConsole() {
+            while (consoleContent.firstChild) {
+                consoleContent.removeChild(consoleContent.firstChild);
+            }
+        }
+
+        // Process button
+        processBtn.addEventListener('click', async () => {
+            if (!selectedFile) return;
+
+            processBtn.disabled = true;
+            progressSection.classList.add('show');
+            consoleSection.classList.add('show');
+            clearConsole();
+            hideError();
+
+            try {
+                updateProgress(10, 'Uploading PDF...');
+                const formData = new FormData();
+                formData.append('file', selectedFile);
+                formData.append('enable_search', document.getElementById('enableSearch').checked);
+                formData.append('timeout', document.getElementById('timeout').value);
+                formData.append('delay', document.getElementById('delay').value);
+
+                const uploadResponse = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!uploadResponse.ok) {
+                    const error = await uploadResponse.json();
+                    throw new Error(error.error || 'Upload failed');
+                }
+
+                const uploadData = await uploadResponse.json();
+                jobId = uploadData.job_id;
+
+                updateProgress(20, 'Starting analysis...');
+
+                const processResponse = await fetch('/process/' + jobId, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        enable_search: document.getElementById('enableSearch').checked,
+                        timeout: parseInt(document.getElementById('timeout').value),
+                        delay: parseFloat(document.getElementById('delay').value)
+                    })
+                });
+
+                if (!processResponse.ok) {
+                    const error = await processResponse.json();
+                    throw new Error(error.error || 'Processing failed');
+                }
+
+                updateProgress(30, 'Analyzing references...');
+                streamLogs(jobId);
+
+            } catch (error) {
+                showError(error.message);
+                processBtn.disabled = false;
+                progressSection.classList.remove('show');
+                consoleSection.classList.remove('show');
+            }
+        });
+
+        function streamLogs(jobId) {
+            const eventSource = new EventSource('/stream/' + jobId);
+
+            eventSource.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+
+                if (data.log) {
+                    appendLog(data.log);
+                    updateProgress(50, 'Processing...');
+                }
+
+                if (data.complete) {
+                    eventSource.close();
+                    consoleStatus.textContent = 'Complete ✓';
+                    const dot = document.querySelector('.console-dot');
+                    dot.style.background = 'var(--success)';
+                    dot.style.animation = 'none';
+
+                    if (data.status && data.status.error) {
+                        showError(data.status.error);
+                        processBtn.disabled = false;
+                        updateProgress(0, 'Failed');
+                    } else {
+                        updateProgress(100, 'Complete! Redirecting...');
+                        setTimeout(() => {
+                            window.location.href = '/results/' + jobId;
+                        }, 1500);
+                    }
+                }
+            };
+
+            eventSource.onerror = () => {
+                eventSource.close();
+                consoleStatus.textContent = 'Connection lost';
+            };
+        }
+
+        function appendLog(message) {
+            const line = document.createElement('div');
+            line.className = 'console-line';
+
+            if (message.indexOf('ERROR') !== -1 || message.indexOf('✗') !== -1 || message.indexOf('[X]') !== -1) {
+                line.classList.add('error');
+            } else if (message.indexOf('✓') !== -1 || message.indexOf('[OK]') !== -1 || message.indexOf('DONE') !== -1) {
+                line.classList.add('success');
+            }
+
+            line.textContent = message;
+            consoleContent.appendChild(line);
+            consoleContent.scrollTop = consoleContent.scrollHeight;
+        }
+
+        function updateProgress(percent, text) {
+            progressFill.style.width = percent + '%';
+            progressPercent.textContent = percent + '%';
+            progressText.textContent = text;
+        }
+
+        function showError(message) {
+            errorText.textContent = message;
+            errorMessage.classList.add('show');
+        }
+
+        function hideError() {
+            errorMessage.classList.remove('show');
+        }
+    </script>
+</body>
+</html>

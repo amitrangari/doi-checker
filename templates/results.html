@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Results - DOI & Reference Checker</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-deep: #0d0f14;
+            --bg-card: #161921;
+            --bg-elevated: #1e222b;
+            --border-subtle: rgba(255, 255, 255, 0.06);
+            --border-hover: rgba(255, 255, 255, 0.12);
+            --text-primary: #f4f4f5;
+            --text-secondary: #9ca3af;
+            --text-muted: #6b7280;
+            --accent-amber: #f59e0b;
+            --accent-amber-glow: rgba(245, 158, 11, 0.15);
+            --accent-amber-soft: rgba(245, 158, 11, 0.08);
+            --success: #10b981;
+            --success-soft: rgba(16, 185, 129, 0.1);
+            --error: #ef4444;
+            --error-soft: rgba(239, 68, 68, 0.1);
+            --warning: #f59e0b;
+            --warning-soft: rgba(245, 158, 11, 0.1);
+            --info: #3b82f6;
+            --info-soft: rgba(59, 130, 246, 0.1);
+            --serif: 'Cormorant Garamond', Georgia, serif;
+            --sans: 'DM Sans', -apple-system, sans-serif;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--sans);
+            background: var(--bg-deep);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        /* Header */
+        .header {
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border-subtle);
+            padding: 32px 24px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(20px);
+        }
+
+        .header-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 24px;
+        }
+
+        .header-title {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .logo-small {
+            width: 48px;
+            height: 48px;
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        h1 {
+            font-family: var(--serif);
+            font-size: 1.75rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .header-subtitle {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 18px;
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            font-family: var(--sans);
+            font-size: 0.875rem;
+            font-weight: 500;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn:hover {
+            background: var(--bg-card);
+            border-color: var(--border-hover);
+            color: var(--text-primary);
+        }
+
+        .btn-primary {
+            background: var(--accent-amber);
+            border-color: var(--accent-amber);
+            color: var(--bg-deep);
+        }
+
+        .btn-primary:hover {
+            background: #d97706;
+            border-color: #d97706;
+            color: var(--bg-deep);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+        }
+
+        /* Summary cards */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 12px;
+        }
+
+        .summary-card {
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            transition: all 0.2s ease;
+        }
+
+        .summary-card:hover {
+            border-color: var(--border-hover);
+            transform: translateY(-2px);
+        }
+
+        .summary-number {
+            font-family: var(--serif);
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--accent-amber);
+            line-height: 1;
+            margin-bottom: 8px;
+        }
+
+        .summary-label {
+            font-size: 0.8125rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .summary-card.success .summary-number {
+            color: var(--success);
+        }
+
+        .summary-card.error .summary-number {
+            color: var(--error);
+        }
+
+        .summary-card.info .summary-number {
+            color: var(--info);
+        }
+
+        /* Main content */
+        .main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 32px 24px;
+        }
+
+        /* Reference list */
+        .reference-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .reference-item {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 16px;
+            overflow: hidden;
+            transition: all 0.2s ease;
+        }
+
+        .reference-item:hover {
+            border-color: var(--border-hover);
+        }
+
+        .reference-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 20px 24px;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        .reference-header:hover {
+            background: var(--bg-elevated);
+        }
+
+        .reference-main {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .reference-meta {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .reference-number {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 32px;
+            height: 32px;
+            padding: 0 12px;
+            background: var(--accent-amber);
+            color: var(--bg-deep);
+            font-size: 0.8125rem;
+            font-weight: 600;
+            border-radius: 16px;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .badge-success {
+            background: var(--success-soft);
+            color: var(--success);
+        }
+
+        .badge-error {
+            background: var(--error-soft);
+            color: var(--error);
+        }
+
+        .badge-warning {
+            background: var(--warning-soft);
+            color: var(--warning);
+        }
+
+        .badge-info {
+            background: var(--info-soft);
+            color: var(--info);
+        }
+
+        .reference-title {
+            font-family: var(--serif);
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 6px;
+            line-height: 1.4;
+        }
+
+        .reference-authors {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        .toggle-icon {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg-elevated);
+            border-radius: 8px;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            transition: all 0.3s ease;
+            flex-shrink: 0;
+        }
+
+        .toggle-icon.rotate {
+            transform: rotate(180deg);
+            background: var(--accent-amber-soft);
+            color: var(--accent-amber);
+        }
+
+        /* Reference details */
+        .reference-details {
+            display: none;
+            padding: 0 24px 24px;
+            border-top: 1px solid var(--border-subtle);
+            margin-top: -1px;
+        }
+
+        .reference-details.show {
+            display: block;
+        }
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            padding-top: 20px;
+        }
+
+        .detail-section {
+            background: var(--bg-elevated);
+            border-radius: 12px;
+            padding: 16px 20px;
+        }
+
+        .detail-section h4 {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--accent-amber);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .detail-section p {
+            font-size: 0.9375rem;
+            color: var(--text-secondary);
+        }
+
+        .detail-section a {
+            color: var(--accent-amber);
+            text-decoration: none;
+            word-break: break-all;
+            transition: opacity 0.2s ease;
+        }
+
+        .detail-section a:hover {
+            opacity: 0.8;
+            text-decoration: underline;
+        }
+
+        /* URL list */
+        .url-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .url-list li {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            font-size: 0.875rem;
+        }
+
+        .url-list li::before {
+            content: '→';
+            color: var(--accent-amber);
+            flex-shrink: 0;
+        }
+
+        /* Search results */
+        .search-results {
+            margin-top: 12px;
+        }
+
+        .search-result-item {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 8px;
+        }
+
+        .search-result-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .match-score {
+            display: inline-flex;
+            align-items: center;
+            padding: 2px 8px;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .match-score.high {
+            background: var(--success-soft);
+            color: var(--success);
+        }
+
+        .match-score.medium {
+            background: var(--warning-soft);
+            color: var(--warning);
+        }
+
+        .match-score.low {
+            background: var(--error-soft);
+            color: var(--error);
+        }
+
+        /* Raw text */
+        .raw-text {
+            background: var(--bg-deep);
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            padding: 16px;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 0.8125rem;
+            line-height: 1.6;
+            color: var(--text-secondary);
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .raw-text::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .raw-text::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .raw-text::-webkit-scrollbar-thumb {
+            background: var(--border-subtle);
+            border-radius: 3px;
+        }
+
+        /* Validation results */
+        .validation-item {
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .validation-item:last-child {
+            border-bottom: none;
+        }
+
+        .validation-label {
+            font-size: 0.8125rem;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+
+        .validation-value {
+            font-size: 0.9375rem;
+            color: var(--text-primary);
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 48px 24px;
+            border-top: 1px solid var(--border-subtle);
+            margin-top: 48px;
+        }
+
+        .footer-text {
+            font-size: 0.8125rem;
+            color: var(--text-muted);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header-top {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 16px;
+            }
+
+            .header-actions {
+                width: 100%;
+            }
+
+            .btn {
+                flex: 1;
+                justify-content: center;
+            }
+
+            .summary-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .reference-header {
+                flex-direction: column;
+            }
+
+            .toggle-icon {
+                align-self: flex-end;
+            }
+
+            .detail-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .summary-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .reference-meta {
+                flex-wrap: wrap;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-inner">
+            <div class="header-top">
+                <div class="header-title">
+                    <div class="logo-small">🔬</div>
+                    <div>
+                        <h1>Reference Analysis</h1>
+                        <p class="header-subtitle">Processing complete</p>
+                    </div>
+                </div>
+                <div class="header-actions">
+                    <a href="/" class="btn">← New Analysis</a>
+                    <a href="/download/{{ job_id }}/json" class="btn">JSON</a>
+                    <a href="/download/{{ job_id }}/txt" class="btn">Text</a>
+                    <a href="/download/{{ job_id }}/html" class="btn btn-primary">Download Report</a>
+                </div>
+            </div>
+
+            <div class="summary-grid">
+                <div class="summary-card">
+                    <div class="summary-number">{{ summary.total_references }}</div>
+                    <div class="summary-label">Total References</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-number">{{ summary.with_urls }}</div>
+                    <div class="summary-label">With URLs/DOIs</div>
+                </div>
+                <div class="summary-card success">
+                    <div class="summary-number">{{ summary.accessible }}</div>
+                    <div class="summary-label">Accessible</div>
+                </div>
+                <div class="summary-card error">
+                    <div class="summary-number">{{ summary.inaccessible }}</div>
+                    <div class="summary-label">Inaccessible</div>
+                </div>
+                {% if summary.searched > 0 %}
+                <div class="summary-card info">
+                    <div class="summary-number">{{ summary.searched }}</div>
+                    <div class="summary-label">Web Searched</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </header>
+
+    <main class="main">
+        <div class="reference-list">
+            {% for ref in references %}
+            <div class="reference-item">
+                <div class="reference-header" onclick="toggleDetails({{ ref.number }})">
+                    <div class="reference-main">
+                        <div class="reference-meta">
+                            <span class="reference-number">#{{ ref.number }}</span>
+                            {% if ref.urls %}
+                                {% if ref.is_accessible %}
+                                    <span class="badge badge-success">✓ Accessible</span>
+                                {% else %}
+                                    <span class="badge badge-error">✗ Not Accessible</span>
+                                {% endif %}
+                            {% endif %}
+                            {% if ref.search_results and ref.search_results.search_performed %}
+                                <span class="badge badge-info">🔍 Searched</span>
+                            {% endif %}
+                        </div>
+                        {% if ref.title %}
+                        <div class="reference-title">{{ ref.title }}</div>
+                        {% endif %}
+                        {% if ref.authors %}
+                        <div class="reference-authors">{{ ref.authors|join('; ') }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="toggle-icon" id="icon-{{ ref.number }}">▼</div>
+                </div>
+
+                <div class="reference-details" id="details-{{ ref.number }}">
+                    <div class="detail-grid">
+                        {% if ref.year %}
+                        <div class="detail-section">
+                            <h4>📅 Publication Year</h4>
+                            <p>{{ ref.year }}</p>
+                        </div>
+                        {% endif %}
+
+                        {% if ref.doi %}
+                        <div class="detail-section">
+                            <h4>🔗 DOI</h4>
+                            <p><a href="https://doi.org/{{ ref.doi }}" target="_blank">{{ ref.doi }}</a></p>
+                        </div>
+                        {% endif %}
+
+                        {% if ref.urls %}
+                        <div class="detail-section">
+                            <h4>🌐 URLs</h4>
+                            <ul class="url-list">
+                                {% for url in ref.urls %}
+                                <li><a href="{{ url }}" target="_blank">{{ url }}</a></li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
+
+                        {% if ref.validation_results and ref.validation_results.match_results %}
+                        <div class="detail-section">
+                            <h4>✅ Content Matching</h4>
+                            {% for match in ref.validation_results.match_results %}
+                            <div class="validation-item">
+                                <div class="validation-label">URL</div>
+                                <div class="validation-value"><a href="{{ match.url }}" target="_blank">{{ match.url }}</a></div>
+                                <div class="validation-label" style="margin-top: 8px;">Title Match</div>
+                                <div class="validation-value">{{ match.title_match }}%</div>
+                                <div class="validation-label" style="margin-top: 8px;">Authors Found</div>
+                                <div class="validation-value">{{ match.authors_found }}</div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+
+                        {% if ref.search_results and ref.search_results.search_performed %}
+                        <div class="detail-section" style="grid-column: 1 / -1;">
+                            <h4>🔍 Web Search Results</h4>
+                            <p style="margin-bottom: 12px;"><strong>Query:</strong> {{ ref.search_results.query }}</p>
+
+                            {% if ref.search_results.best_match %}
+                            <div class="search-results">
+                                <p style="margin-bottom: 8px;">
+                                    <strong>Best Match:</strong>
+                                    <span class="match-score {% if ref.search_results.best_match.match_score >= 70 %}high{% elif ref.search_results.best_match.match_score >= 50 %}medium{% else %}low{% endif %}">
+                                        {{ ref.search_results.best_match.match_score }}%
+                                    </span>
+                                </p>
+                                <div class="search-result-item">
+                                    <strong>{{ ref.search_results.best_match.title }}</strong><br>
+                                    <a href="{{ ref.search_results.best_match.url }}" target="_blank">{{ ref.search_results.best_match.url }}</a><br>
+                                    <small style="color: var(--text-muted);">{{ ref.search_results.best_match.snippet[:200] }}...</small>
+                                </div>
+
+                                {% if ref.search_results.results|length > 1 %}
+                                <p style="margin: 16px 0 8px;"><strong>All Results:</strong></p>
+                                {% for result in ref.search_results.results %}
+                                <div class="search-result-item">
+                                    <span class="match-score {% if result.match_score >= 70 %}high{% elif result.match_score >= 50 %}medium{% else %}low{% endif %}">
+                                        {{ result.match_score }}%
+                                    </span>
+                                    <strong style="margin-left: 8px;">Rank #{{ result.rank }}</strong><br>
+                                    <a href="{{ result.url }}" target="_blank">{{ result.url }}</a>
+                                </div>
+                                {% endfor %}
+                                {% endif %}
+                            </div>
+                            {% else %}
+                            <p style="color: var(--text-muted);">No matches found</p>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+
+                        <div class="detail-section" style="grid-column: 1 / -1;">
+                            <h4>📝 Raw Reference Text</h4>
+                            <div class="raw-text">{{ ref.raw_text }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </main>
+
+    <footer class="footer">
+        <p class="footer-text">Built for rigorous academic review</p>
+    </footer>
+
+    <script>
+        function toggleDetails(num) {
+            const details = document.getElementById('details-' + num);
+            const icon = document.getElementById('icon-' + num);
+            details.classList.toggle('show');
+            icon.classList.toggle('rotate');
+        }
+    </script>
+</body>
+</html>
