@@ -525,12 +525,30 @@
                     throw new Error(error.error || 'Upload failed');
                 }
 
-                const data = await response.json();
-                showStatus('File uploaded successfully! Processing...', 'success');
+                const uploadData = await response.json();
+                showStatus('File uploaded successfully! Starting processing...', 'success');
                 
+                // Now start the processing
+                const processResponse = await fetch(`/process/${uploadData.job_id}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        enable_search: uploadData.enable_search,
+                        timeout: parseInt(timeoutInput.value),
+                        delay: parseFloat(delayInput.value)
+                    })
+                });
+
+                if (!processResponse.ok) {
+                    const error = await processResponse.json();
+                    throw new Error(error.error || 'Processing failed to start');
+                }
+
                 // Redirect to results page
                 setTimeout(() => {
-                    window.location.href = `/results/${data.job_id}`;
+                    window.location.href = `/results/${uploadData.job_id}`;
                 }, 1500);
 
             } catch (error) {

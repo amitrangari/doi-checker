@@ -544,9 +544,148 @@
                 flex-wrap: wrap;
             }
         }
+
+        /* Processing state styles */
+        .processing-container {
+            position: fixed;
+            inset: 0;
+            background: var(--bg-deep);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .processing-container.show {
+            display: flex;
+        }
+
+        .processing-content {
+            max-width: 900px;
+            width: 90%;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 60px;
+            height: 60px;
+            border: 4px solid var(--border-subtle);
+            border-top-color: var(--accent-amber);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 32px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .processing-title {
+            font-family: var(--serif);
+            font-size: 2rem;
+            font-weight: 600;
+            margin-bottom: 12px;
+            text-align: center;
+        }
+
+        .processing-text {
+            text-align: center;
+            color: var(--text-secondary);
+            margin-bottom: 32px;
+            font-size: 1.05rem;
+        }
+
+        .logs-container {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            padding: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .logs-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .logs-container::-webkit-scrollbar-track {
+            background: var(--bg-elevated);
+            border-radius: 4px;
+        }
+
+        .logs-container::-webkit-scrollbar-thumb {
+            background: var(--border-subtle);
+            border-radius: 4px;
+        }
+
+        .logs-container::-webkit-scrollbar-thumb:hover {
+            background: var(--border-hover);
+        }
+
+        .log-entry {
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .log-entry.success {
+            color: var(--success);
+        }
+
+        .log-entry.error {
+            color: var(--error);
+        }
+
+        .log-entry.info {
+            color: var(--info);
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: var(--bg-elevated);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 12px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--accent-amber);
+            width: 0%;
+            transition: width 0.3s ease;
+            border-radius: 4px;
+        }
+
+        .progress-text {
+            text-align: center;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
     </style>
 </head>
 <body>
+    <!-- Processing State Container -->
+    <div class="processing-container" id="processingContainer">
+        <div class="processing-content">
+            <div style="text-align: center;">
+                <div class="spinner"></div>
+                <h2 class="processing-title">Processing PDF</h2>
+                <p class="processing-text">Extracting and validating references...</p>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <p class="progress-text" id="progressText">Starting...</p>
+            <div class="logs-container" id="logsContainer"></div>
+        </div>
+    </div>
     <header class="header">
         <div class="header-inner">
             <div class="header-top">
@@ -592,7 +731,7 @@
         </div>
     </header>
 
-    <main class="main">
+    <main class="main" style="display: none;">
         <div class="reference-list">
             {% for ref in references %}
             <div class="reference-item">
@@ -718,6 +857,139 @@
     </footer>
 
     <script>
+        const jobId = '{{ job_id }}';
+        const processingContainer = document.getElementById('processingContainer');
+        const logsContainer = document.getElementById('logsContainer');
+        const progressFill = document.getElementById('progressFill');
+        const progressText = document.getElementById('progressText');
+        const mainContent = document.querySelector('main.main');
+
+        // Check job status on load
+        async function checkJobStatus() {
+            try {
+                const response = await fetch(`/api/job/${jobId}/status`);
+                const status = await response.json();
+
+                if (status.complete && status.success) {
+                    // Processing complete, show results
+                    hideProcessing();
+                    return true;
+                } else if (response.status === 404 || !status.started) {
+                    // Processing not started yet or in progress, show processing view and stream logs
+                    showProcessing();
+                    streamLogs();
+                    return false;
+                } else {
+                    // Processing in progress
+                    showProcessing();
+                    streamLogs();
+                    return false;
+                }
+            } catch (error) {
+                console.error('Error checking job status:', error);
+                showProcessing();
+                streamLogs();
+                return false;
+            }
+        }
+
+        function showProcessing() {
+            processingContainer.classList.add('show');
+            if (mainContent) mainContent.style.display = 'none';
+        }
+
+        function hideProcessing() {
+            processingContainer.classList.remove('show');
+            if (mainContent) mainContent.style.display = 'block';
+        }
+
+        function streamLogs() {
+            const eventSource = new EventSource(`/stream/${jobId}`);
+            let currentProgress = 0;
+
+            eventSource.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+
+                if (data.log) {
+                    // Add log entry
+                    const logEntry = document.createElement('div');
+                    logEntry.className = 'log-entry';
+                    logEntry.textContent = data.log;
+
+                    // Color code based on content
+                    if (data.log.includes('[OK]')) {
+                        logEntry.classList.add('success');
+                    } else if (data.log.includes('ERROR') || data.log.includes('error')) {
+                        logEntry.classList.add('error');
+                    } else if (data.log.includes('Progress:')) {
+                        logEntry.classList.add('info');
+                        // Extract progress percentage
+                        const match = data.log.match(/Progress: (\d+)%/);
+                        if (match) {
+                            currentProgress = parseInt(match[1]);
+                            progressFill.style.width = currentProgress + '%';
+                            progressText.textContent = `${currentProgress}% Complete`;
+                        }
+                    }
+
+                    logsContainer.appendChild(logEntry);
+                    logsContainer.scrollTop = logsContainer.scrollHeight;
+                } else if (data.complete) {
+                    // Processing complete
+                    eventSource.close();
+                    progressFill.style.width = '100%';
+                    progressText.textContent = '100% Complete - Rendering results...';
+
+                    // Add final status message
+                    const finalEntry = document.createElement('div');
+                    finalEntry.className = 'log-entry success';
+                    finalEntry.textContent = '✓ Processing complete. Loading results...';
+                    logsContainer.appendChild(finalEntry);
+                    logsContainer.scrollTop = logsContainer.scrollHeight;
+
+                    // Reload page to show results
+                    setTimeout(() => {
+                        location.reload();
+                    }, 2000);
+                } else if (data.keepalive) {
+                    // Keepalive message, do nothing
+                }
+            };
+
+            eventSource.onerror = function(error) {
+                console.error('EventSource error:', error);
+                eventSource.close();
+
+                // Retry job status check
+                setTimeout(() => {
+                    checkJobStatus().then(isComplete => {
+                        if (!isComplete) {
+                            streamLogs();
+                        }
+                    });
+                }, 3000);
+            };
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check if we have any references rendered
+            const referenceCount = document.querySelectorAll('.reference-item').length;
+            
+            if (referenceCount === 0) {
+                // No results yet, start processing
+                checkJobStatus().then(isComplete => {
+                    if (!isComplete) {
+                        // Processing is ongoing, logs are being streamed
+                    }
+                });
+            } else {
+                // Results already available, just hide processing
+                hideProcessing();
+            }
+        });
+
+        // Existing function for toggling details
         function toggleDetails(num) {
             const details = document.getElementById('details-' + num);
             const icon = document.getElementById('icon-' + num);

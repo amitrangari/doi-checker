@@ -290,30 +290,42 @@ def view_results(job_id):
     output_dir = Path(app.config['OUTPUT_FOLDER']) / job_id
     json_path = output_dir / 'references.json'
 
-    if not json_path.exists():
-        return "Results not found", 404
+    # Check if processing is complete
+    if json_path.exists():
+        with open(json_path, 'r', encoding='utf-8') as f:
+            report_data = json.load(f)
 
-    with open(json_path, 'r', encoding='utf-8') as f:
-        report_data = json.load(f)
+        # Generate summary
+        total = len(report_data)
+        with_urls = sum(1 for ref in report_data if ref.get('urls'))
+        accessible = sum(1 for ref in report_data if ref.get('is_accessible'))
+        searched = sum(1 for ref in report_data if (ref.get('search_results') or {}).get('search_performed'))
 
-    # Generate summary
-    total = len(report_data)
-    with_urls = sum(1 for ref in report_data if ref.get('urls'))
-    accessible = sum(1 for ref in report_data if ref.get('is_accessible'))
-    searched = sum(1 for ref in report_data if (ref.get('search_results') or {}).get('search_performed'))
+        summary = {
+            'total_references': total,
+            'with_urls': with_urls,
+            'accessible': accessible,
+            'inaccessible': with_urls - accessible,
+            'searched': searched
+        }
 
-    summary = {
-        'total_references': total,
-        'with_urls': with_urls,
-        'accessible': accessible,
-        'inaccessible': with_urls - accessible,
-        'searched': searched
-    }
-
-    return render_template('results.html',
-                         job_id=job_id,
-                         summary=summary,
-                         references=report_data)
+        return render_template('results.html',
+                             job_id=job_id,
+                             summary=summary,
+                             references=report_data)
+    else:
+        # Processing still in progress or not started, return template with empty data
+        # The JavaScript will show the processing UI and wait for completion
+        return render_template('results.html',
+                             job_id=job_id,
+                             summary={
+                                 'total_references': 0,
+                                 'with_urls': 0,
+                                 'accessible': 0,
+                                 'inaccessible': 0,
+                                 'searched': 0
+                             },
+                             references=[])
 
 
 def generate_html_report(references, output_dir, job_id):
@@ -386,6 +398,44 @@ def status():
         'status': 'running',
         'version': '1.0.0'
     })
+
+
+@app.route('/api/job/<job_id>/status')
+def job_status(job_id):
+    """Check the processing status of a job"""
+    if job_id in processing_status:
+        return jsonify(processing_status[job_id])
+    
+    # Check if results file exists
+    output_dir = Path(app.config['OUTPUT_FOLDER']) / job_id
+    json_path = output_dir / 'references.json'
+    
+    if json_path.exists():
+        with open(json_path, 'r', encoding='utf-8') as f:
+            report_data = json.load(f)
+        
+        total = len(report_data)
+        with_urls = sum(1 for ref in report_data if ref.get('urls'))
+        accessible = sum(1 for ref in report_data if ref.get('is_accessible'))
+        searched = sum(1 for ref in report_data if (ref.get('search_results') or {}).get('search_performed'))
+        
+        summary = {
+            'total_references': total,
+            'with_urls': with_urls,
+            'accessible': accessible,
+            'inaccessible': with_urls - accessible,
+            'searched': searched
+        }
+        
+        return jsonify({
+            'complete': True,
+            'success': True,
+            'job_id': job_id,
+            'summary': summary,
+            'references': report_data
+        })
+    
+    return jsonify({'complete': False, 'started': False}), 404
 
 
 if __name__ == '__main__':
