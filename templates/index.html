@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DOI & Reference Checker</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-deep: #0d0f14;
+            --bg-card: #161921;
+            --bg-elevated: #1e222b;
+            --border-subtle: rgba(255, 255, 255, 0.06);
+            --border-hover: rgba(255, 255, 255, 0.12);
+            --text-primary: #f4f4f5;
+            --text-secondary: #9ca3af;
+            --text-muted: #6b7280;
+            --accent-amber: #f59e0b;
+            --accent-amber-glow: rgba(245, 158, 11, 0.15);
+            --accent-amber-soft: rgba(245, 158, 11, 0.08);
+            --success: #10b981;
+            --success-soft: rgba(16, 185, 129, 0.1);
+            --error: #ef4444;
+            --error-soft: rgba(239, 68, 68, 0.1);
+            --warning: #f59e0b;
+            --warning-soft: rgba(245, 158, 11, 0.1);
+            --info: #3b82f6;
+            --info-soft: rgba(59, 130, 246, 0.1);
+            --serif: 'Cormorant Garamond', Georgia, serif;
+            --sans: 'DM Sans', -apple-system, sans-serif;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--sans);
+            background: var(--bg-deep);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        .header {
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border-subtle);
+            padding: 32px 24px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(20px);
+        }
+
+        .header-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header-top {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .logo-small {
+            width: 48px;
+            height: 48px;
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        h1 {
+            font-family: var(--serif);
+            font-size: 2rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .subtitle {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        .main-container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 48px 24px;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 16px;
+            padding: 48px;
+            margin-bottom: 32px;
+        }
+
+        .card h2 {
+            font-family: var(--serif);
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 24px;
+            color: var(--accent-amber);
+        }
+
+        .form-group {
+            margin-bottom: 28px;
+        }
+
+        label {
+            display: block;
+            font-size: 0.95rem;
+            font-weight: 500;
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+
+        .upload-zone {
+            border: 2px dashed var(--border-subtle);
+            border-radius: 12px;
+            padding: 48px 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: var(--bg-elevated);
+        }
+
+        .upload-zone:hover {
+            border-color: var(--accent-amber);
+            background: var(--accent-amber-soft);
+        }
+
+        .upload-zone.dragover {
+            border-color: var(--accent-amber);
+            background: var(--accent-amber-glow);
+        }
+
+        .upload-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        .upload-text {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            margin-bottom: 8px;
+        }
+
+        .upload-hint {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+
+        .option-item {
+            background: var(--bg-elevated);
+            padding: 18px;
+            border-radius: 12px;
+            border: 1px solid var(--border-subtle);
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        input[type="checkbox"],
+        input[type="range"] {
+            cursor: pointer;
+        }
+
+        .range-input {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: var(--border-subtle);
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .range-input::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--accent-amber);
+            cursor: pointer;
+        }
+
+        .range-input::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--accent-amber);
+            cursor: pointer;
+            border: none;
+        }
+
+        .range-value {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 8px;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 32px;
+        }
+
+        button {
+            padding: 12px 32px;
+            border-radius: 8px;
+            border: none;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: var(--sans);
+        }
+
+        .btn-primary {
+            background: var(--accent-amber);
+            color: #000;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: #f0931f;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(245, 158, 11, 0.3);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: var(--bg-elevated);
+            color: var(--text-primary);
+            border: 1px solid var(--border-subtle);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--border-hover);
+            background: var(--bg-elevated);
+        }
+
+        .status-message {
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            display: none;
+            animation: slideIn 0.3s ease;
+        }
+
+        .status-message.show {
+            display: block;
+        }
+
+        .status-message.error {
+            background: var(--error-soft);
+            color: var(--error);
+            border: 1px solid var(--error-soft);
+        }
+
+        .status-message.success {
+            background: var(--success-soft);
+            color: var(--success);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .status-message.info {
+            background: var(--info-soft);
+            color: var(--info);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(245, 158, 11, 0.3);
+            border-top-color: var(--accent-amber);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .file-name {
+            margin-top: 12px;
+            padding: 12px;
+            background: var(--bg-elevated);
+            border-radius: 8px;
+            border: 1px solid var(--border-subtle);
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            display: none;
+        }
+
+        .file-name.show {
+            display: block;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 32px 24px;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-inner">
+            <div class="header-top">
+                <div class="logo-small">📑</div>
+                <div>
+                    <h1>DOI & Reference Checker</h1>
+                    <p class="subtitle">Extract and validate DOIs and references from PDF documents</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <div class="card">
+            <h2>Upload PDF</h2>
+            
+            <div id="statusMessage" class="status-message"></div>
+
+            <form id="uploadForm">
+                <div class="form-group">
+                    <div class="upload-zone" id="uploadZone">
+                        <div class="upload-icon">📄</div>
+                        <p class="upload-text">Drag and drop your PDF here or click to browse</p>
+                        <p class="upload-hint">Maximum file size: 50 MB</p>
+                    </div>
+                    <input type="file" id="fileInput" accept=".pdf" />
+                    <div class="file-name" id="fileName"></div>
+                </div>
+
+                <div class="options-grid">
+                    <div class="option-item">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="enableSearch" name="enable_search" />
+                            <span>Enable URL Search</span>
+                        </label>
+                        <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 8px;">Attempt to find URLs for references without DOIs</p>
+                    </div>
+
+                    <div class="option-item">
+                        <label for="timeout">Request Timeout (seconds)</label>
+                        <input type="range" id="timeout" name="timeout" min="5" max="60" value="10" class="range-input" />
+                        <div class="range-value">
+                            <span>Timeout:</span>
+                            <span id="timeoutValue">10s</span>
+                        </div>
+                    </div>
+
+                    <div class="option-item">
+                        <label for="delay">Request Delay (seconds)</label>
+                        <input type="range" id="delay" name="delay" min="0.1" max="5" value="1.0" step="0.1" class="range-input" />
+                        <div class="range-value">
+                            <span>Delay:</span>
+                            <span id="delayValue">1.0s</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button type="submit" id="submitBtn" class="btn-primary" disabled>Process PDF</button>
+                    <button type="reset" id="resetBtn" class="btn-secondary">Clear</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>© 2025 DOI & Reference Checker. Process large PDFs and extract comprehensive reference metadata.</p>
+    </div>
+
+    <script>
+        const uploadZone = document.getElementById('uploadZone');
+        const fileInput = document.getElementById('fileInput');
+        const fileName = document.getElementById('fileName');
+        const uploadForm = document.getElementById('uploadForm');
+        const submitBtn = document.getElementById('submitBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const statusMessage = document.getElementById('statusMessage');
+        const timeoutInput = document.getElementById('timeout');
+        const delayInput = document.getElementById('delay');
+        const timeoutValue = document.getElementById('timeoutValue');
+        const delayValue = document.getElementById('delayValue');
+
+        // File selection
+        uploadZone.addEventListener('click', () => fileInput.click());
+
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length > 0) {
+                const file = fileInput.files[0];
+                
+                if (file.type !== 'application/pdf') {
+                    showStatus('Only PDF files are allowed', 'error');
+                    fileInput.value = '';
+                    fileName.classList.remove('show');
+                    submitBtn.disabled = true;
+                    return;
+                }
+
+                if (file.size > 50 * 1024 * 1024) {
+                    showStatus('File size exceeds 50 MB limit', 'error');
+                    fileInput.value = '';
+                    fileName.classList.remove('show');
+                    submitBtn.disabled = true;
+                    return;
+                }
+
+                fileName.textContent = `Selected: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+                fileName.classList.add('show');
+                submitBtn.disabled = false;
+                clearStatus();
+            }
+        });
+
+        // Drag and drop
+        uploadZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadZone.classList.add('dragover');
+        });
+
+        uploadZone.addEventListener('dragleave', () => {
+            uploadZone.classList.remove('dragover');
+        });
+
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('dragover');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                fileInput.files = files;
+                const event = new Event('change', { bubbles: true });
+                fileInput.dispatchEvent(event);
+            }
+        });
+
+        // Range inputs
+        timeoutInput.addEventListener('change', () => {
+            timeoutValue.textContent = timeoutInput.value + 's';
+        });
+
+        delayInput.addEventListener('change', () => {
+            delayValue.textContent = delayInput.value + 's';
+        });
+
+        // Form submission
+        uploadForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            if (!fileInput.files[0]) {
+                showStatus('Please select a PDF file', 'error');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            formData.append('enable_search', document.getElementById('enableSearch').checked ? 'true' : 'false');
+            formData.append('timeout', timeoutInput.value);
+            formData.append('delay', delayInput.value);
+
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="loading-spinner"></span>Uploading...';
+
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Upload failed');
+                }
+
+                const data = await response.json();
+                showStatus('File uploaded successfully! Processing...', 'success');
+                
+                // Redirect to results page
+                setTimeout(() => {
+                    window.location.href = `/results/${data.job_id}`;
+                }, 1500);
+
+            } catch (error) {
+                showStatus(`Error: ${error.message}`, 'error');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = 'Process PDF';
+            }
+        });
+
+        resetBtn.addEventListener('click', () => {
+            fileInput.value = '';
+            fileName.classList.remove('show');
+            submitBtn.disabled = true;
+            clearStatus();
+            document.getElementById('enableSearch').checked = false;
+            timeoutInput.value = 10;
+            delayInput.value = 1.0;
+            timeoutValue.textContent = '10s';
+            delayValue.textContent = '1.0s';
+        });
+
+        function showStatus(message, type) {
+            statusMessage.textContent = message;
+            statusMessage.className = `status-message show ${type}`;
+        }
+
+        function clearStatus() {
+            statusMessage.classList.remove('show');
+        }
+    </script>
+</body>
+</html>
